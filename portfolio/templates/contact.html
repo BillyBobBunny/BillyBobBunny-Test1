@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Contact — Blair{% endblock %}
+{% block page_id %}contact{% endblock %}
+
+{% block content %}
+<section class="page-header container">
+  <span class="eyebrow reveal">Contact</span>
+  <h1 class="reveal" style="margin-top:10px; font-size: clamp(2rem, 4vw, 2.8rem);">Get in touch</h1>
+  <p class="section-lead reveal" style="margin-top:14px;">
+    Placeholder contact form — messages are handled by <code>/api/contact</code> in <code>app.py</code>.
+  </p>
+</section>
+
+<section class="page-section" style="padding-top:0;">
+  <div class="container contact-layout">
+
+    <div class="glass-card form-card reveal">
+      <form id="contact-form" novalidate>
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Your name" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" name="subject" placeholder="What's this about?" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" placeholder="Write your message here…" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Send message</button>
+        <div id="form-status" class="form-status" role="status"></div>
+      </form>
+    </div>
+
+    <div class="contact-links reveal">
+      <a href="https://github.com/" target="_blank" rel="noopener" class="glass-card contact-link-card">
+        <span class="contact-link-icon">⌥</span>
+        <div><h4>GitHub</h4><span>github.com/placeholder</span></div>
+      </a>
+      <a href="https://linkedin.com/" target="_blank" rel="noopener" class="glass-card contact-link-card">
+        <span class="contact-link-icon">in</span>
+        <div><h4>LinkedIn</h4><span>linkedin.com/in/placeholder</span></div>
+      </a>
+      <a href="mailto:hello@example.com" class="glass-card contact-link-card">
+        <span class="contact-link-icon">✉</span>
+        <div><h4>Email</h4><span>hello@example.com</span></div>
+      </a>
+      <a href="https://instagram.com/" target="_blank" rel="noopener" class="glass-card contact-link-card">
+        <span class="contact-link-icon">◎</span>
+        <div><h4>Instagram</h4><span>@placeholder</span></div>
+      </a>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

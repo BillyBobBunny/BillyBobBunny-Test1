@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Skills — Blair{% endblock %}
+{% block page_id %}skills{% endblock %}
+
+{% block content %}
+<section class="page-header container">
+  <span class="eyebrow reveal">Skills</span>
+  <h1 class="reveal" style="margin-top:10px; font-size: clamp(2rem, 4vw, 2.8rem);">What I work with</h1>
+  <p class="section-lead reveal" style="margin-top:14px;">
+    Placeholder proficiency levels across a few categories. Edit the values in
+    <code>templates/skills.html</code> to reflect your own skill set.
+  </p>
+</section>
+
+<section class="page-section" style="padding-top:0;">
+  <div class="container grid grid-2">
+
+    {% for category in skill_categories %}
+    <div class="glass-card skill-cat reveal">
+      <div class="skill-cat-head">
+        <h3>{{ category.name }}</h3>
+        <span>{{ category.skills|length }} skills</span>
+      </div>
+      {% for item in category.skills %}
+      <div class="skill-bar-row">
+        <div class="skill-bar-label">
+          <span>{{ item.name }}</span>
+          <span>{{ item.level }}%</span>
+        </div>
+        <div class="skill-bar-track">
+          <div class="skill-bar-fill" data-value="{{ item.level }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Hobbies — Blair{% endblock %}
+{% block page_id %}hobbies{% endblock %}
+
+{% block content %}
+<section class="page-header container">
+  <span class="eyebrow reveal">Hobbies &amp; interests</span>
+  <h1 class="reveal" style="margin-top:10px; font-size: clamp(2rem, 4vw, 2.8rem);">Outside of work</h1>
+  <p class="section-lead reveal" style="margin-top:14px;">
+    Placeholder hobby cards — edit the <code>HOBBIES</code> list in <code>app.py</code> to reflect your own interests.
+  </p>
+</section>
+
+<section class="page-section" style="padding-top:0;">
+  <div class="container grid grid-4">
+    {% for hobby in hobbies %}
+    <div class="glass-card hobby-card reveal">
+      <span class="hobby-emoji" aria-hidden="true">{{ hobby.icon }}</span>
+      <h3>{{ hobby.name }}</h3>
+      <p>{{ hobby.description }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

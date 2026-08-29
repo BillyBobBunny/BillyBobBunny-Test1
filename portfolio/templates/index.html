@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Blair — Portfolio{% endblock %}
+{% block page_id %}home{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-bg">
+    <!-- REPLACE: swap for a real background image or photo at static/images/hero-background.jpg -->
+    <img src="{{ url_for('static', filename='images/hero-background.jpg') }}" alt="" />
+  </div>
+
+  <div class="container hero-content">
+    <span class="eyebrow">Portfolio · 2026</span>
+    <!-- REPLACE: name and tagline below with your own -->
+    <h1 class="hero-title">Hi, I'm <span class="accent-italic">Blair</span>.<br>I build things and ask too many questions.</h1>
+    <p class="hero-tagline">
+      This is a placeholder introduction. Use this space for a one- or two-sentence
+      summary of who you are and what you care about — student, maker, researcher,
+      whatever fits. Replace this text in <code>templates/index.html</code>.
+    </p>
+    <div class="hero-actions">
+      <a href="{{ url_for('projects') }}" class="btn btn-primary">View my projects</a>
+      <a href="{{ url_for('about') }}" class="btn btn-ghost">More about me</a>
+    </div>
+  </div>
+
+  <div class="scroll-indicator" aria-hidden="true">
+    <span>Scroll</span>
+    <span class="line"></span>
+  </div>
+</section>
+
+<section class="page-section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Quick overview</span>
+      <h2>A few placeholder highlights</h2>
+      <p class="section-lead">Short cards like these are a good place for a fast summary of what a visitor can find on the rest of the site.</p>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="glass-card card reveal">
+        <div class="card-icon">✦</div>
+        <h3>Skills &amp; tools</h3>
+        <p>A snapshot of programming, science, music, and language skills — with sample proficiency levels.</p>
+        <a href="{{ url_for('skills') }}" class="btn btn-ghost btn-sm mt-lg">See skills →</a>
+      </div>
+      <div class="glass-card card reveal">
+        <div class="card-icon">◆</div>
+        <h3>Selected projects</h3>
+        <p>A handful of sample project cards, ready to be swapped out for real work and write-ups.</p>
+        <a href="{{ url_for('projects') }}" class="btn btn-ghost btn-sm mt-lg">See projects →</a>
+      </div>
+      <div class="glass-card card reveal">
+        <div class="card-icon">●</div>
+        <h3>Achievements</h3>
+        <p>A placeholder timeline of awards, competitions, and milestones you can fill in later.</p>
+        <a href="{{ url_for('achievements') }}" class="btn btn-ghost btn-sm mt-lg">See achievements →</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Achievements — Blair{% endblock %}
+{% block page_id %}achievements{% endblock %}
+
+{% block content %}
+<section class="page-header container">
+  <span class="eyebrow reveal">Achievements</span>
+  <h1 class="reveal" style="margin-top:10px; font-size: clamp(2rem, 4vw, 2.8rem);">Awards &amp; milestones</h1>
+  <p class="section-lead reveal" style="margin-top:14px;">
+    A placeholder timeline — edit the <code>ACHIEVEMENTS</code> list in <code>app.py</code> to add your own.
+  </p>
+</section>
+
+<section class="page-section" style="padding-top:0;">
+  <div class="container">
+    <div class="timeline">
+      {% for item in achievements %}
+      <div class="timeline-item reveal">
+        <div class="timeline-dot"></div>
+        <div class="glass-card timeline-card">
+          <span class="timeline-date">{{ item.date }}</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

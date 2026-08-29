@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}About — Blair{% endblock %}
+{% block page_id %}about{% endblock %}
+
+{% block content %}
+<section class="page-header container">
+  <span class="eyebrow reveal">About</span>
+  <h1 class="reveal" style="margin-top:10px; font-size: clamp(2rem, 4vw, 2.8rem);">A little about me</h1>
+</section>
+
+<section class="page-section" style="padding-top:0;">
+  <div class="container about-layout">
+    <div class="about-photo glass-card reveal">
+      <!-- REPLACE: static/images/profile-placeholder.jpg with a real photo -->
+      <img src="{{ url_for('static', filename='images/profile-placeholder.jpg') }}" alt="Placeholder profile photo" />
+    </div>
+
+    <div class="about-text reveal">
+      <span class="eyebrow">Personality</span>
+      <h2>Curious, a little stubborn, always mid-project</h2>
+      <!-- REPLACE: the paragraphs below with your real bio -->
+      <p>
+        This is placeholder biography text. Use this paragraph to describe your personality —
+        are you methodical, spontaneous, quiet until you're not? Write it the way you'd
+        actually talk, not the way a resume would.
+      </p>
+      <p>
+        Add a second paragraph here about what drives you: a subject you can't stop thinking
+        about, a question you're trying to answer, or a habit that defines how you work.
+      </p>
+
+      <span class="eyebrow">Interests</span>
+      <h2>What I spend my time on</h2>
+      <p>
+        Placeholder text describing your interests — academic, creative, or otherwise.
+        This is a good place to connect seemingly unrelated interests into one coherent story.
+      </p>
+
+      <span class="eyebrow">Goals</span>
+      <h2>Where this is headed</h2>
+      <p>
+        Placeholder text about short- and long-term goals — a program you're aiming for,
+        a skill you're building, or a project you want to finish.
+      </p>
+
+      <div class="fact-row">
+        <span class="fact-pill">Based in — Placeholder City</span>
+        <span class="fact-pill">Studying — Placeholder Program</span>
+        <span class="fact-pill">Focus — Placeholder Field</span>
+        <span class="fact-pill">Open to — Collaboration</span>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
