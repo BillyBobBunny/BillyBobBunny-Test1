@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Topo Weather</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg0: #050b12;
+      --bg1: #09131e;
+      --bg2: rgba(13, 24, 36, 0.68);
+      --glass: rgba(255, 255, 255, 0.08);
+      --glass-2: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #eaf1f7;
+      --muted: rgba(234, 241, 247, 0.72);
+      --muted-2: rgba(234, 241, 247, 0.52);
+      --accent: #f6a33a;
+      --accent-2: #ffd08a;
+      --shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+      --r-xl: 32px;
+      --r-lg: 22px;
+      --r-md: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1000px 700px at 18% 10%, rgba(246, 163, 58, 0.16), transparent 45%),
+        radial-gradient(900px 650px at 88% 18%, rgba(88, 130, 255, 0.14), transparent 45%),
+        radial-gradient(900px 700px at 70% 100%, rgba(14, 58, 92, 0.55), transparent 48%),
+        linear-gradient(180deg, var(--bg1), var(--bg0) 72%);
+      overflow-x: hidden;
+    }
+
+    .noise {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.05;
+      mix-blend-mode: soft-light;
+      background-image:
+        linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+      background-size: 34px 34px;
+      z-index: 0;
+    }
+
+    .wrap {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 22px auto 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(135deg, rgba(246,163,58,.22), rgba(255,255,255,.08));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+      font-weight: 800;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      color: var(--muted);
+      font-size: 0.9rem;
+      box-shadow: var(--shadow);
+      white-space: nowrap;
+    }
+
+    .hero {
+      position: relative;
+      border-radius: 34px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero::before, .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 620px;
+      height: 620px;
+      right: -200px;
+      top: -220px;
+      background: radial-gradient(circle, rgba(246,163,58,.18), transparent 55%);
+      filter: blur(8px);
+    }
+
+    .hero::after {
+      width: 520px;
+      height: 520px;
+      left: -170px;
+      bottom: -230px;
+      background: radial-gradient(circle, rgba(90,140,200,.20), transparent 58%);
+      filter: blur(10px);
+    }
+
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 22px;
+    }
+
+    .panel {
+      border-radius: var(--r-xl);
+      border: 1px solid var(--line);
+      background: var(--bg2);
+      overflow: hidden;
+    }
+
+    .map-panel {
+      min-height: 560px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)),
+        radial-gradient(900px 500px at 50% 65%, rgba(20, 37, 56, 0.08), rgba(0,0,0,0.3));
+    }
+
+    .map-panel {
+  position: relative;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-xl);
+  z-index: 1;
+}
+
+.map-card-header,
+.map-card-footer {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+    .sky {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(245,184,90,0.16), transparent 22%),
+        linear-gradient(180deg, rgba(8, 17, 28, 0) 0%, rgba(7,16,24,.12) 60%, rgba(7,16,24,.60) 100%),
+        radial-gradient(1200px 520px at 50% 34%, rgba(95, 138, 172, 0.52), transparent 48%),
+        linear-gradient(180deg, #7f8f9d 0%, #3a4b63 28%, #111b29 100%);
+      opacity: 0.40;
+    }
+
+    .terrain {
+      position: absolute;
+      inset: auto 0 0;
+      height: 68%;
+      background:
+        linear-gradient(165deg, rgba(255,255,255,.06), rgba(255,255,255,0) 28%),
+        linear-gradient(180deg, rgba(20, 32, 47, 0.02), rgba(2, 8, 14, 0.88)),
+        radial-gradient(140px 100px at 14% 54%, rgba(255, 210, 145, 0.10), transparent 70%),
+        radial-gradient(180px 120px at 72% 28%, rgba(246,163,58,0.12), transparent 70%),
+        linear-gradient(180deg, rgba(14, 24, 38, .06), rgba(2, 8, 14, .94));
+      clip-path: polygon(0% 100%, 0% 74%, 8% 71%, 16% 77%, 27% 51%, 35% 32%, 43% 55%, 52% 24%, 61% 36%, 70% 14%, 79% 28%, 88% 20%, 100% 42%, 100% 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .range-line {
+      position: absolute;
+      inset: auto 0 0;
+      height: 34%;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.26));
+    }
+
+    .map-card-header, .map-card-footer { position: absolute; z-index: 2; }
+    .map-card-header { left: 22px; top: 20px; }
+
+    .title-mini {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .subtitle-mini {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .map-card-footer {
+      left: 22px;
+      right: 22px;
+      bottom: 22px;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-chip {
+      min-width: 110px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .metric-chip .k {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .metric-chip .v {
+      display: block;
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .location-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .tabbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 8px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+    }
+
+    .tab {
+      appearance: none;
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font: inherit;
+      cursor: pointer;
+      transition: background .16s ease, color .16s ease, transform .16s ease;
+    }
+
+    .tab:hover { transform: translateY(-1px); }
+    .tab.active {
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(246,163,58,.20), rgba(255,255,255,.06));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .tabview { display: none; }
+    .tabview.active { display: block; }
+
+    .greeting {
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .greeting h2 {
+      margin: 0;
+      font-size: clamp(2.1rem, 4vw, 3.8rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .greeting p {
+      margin: 12px 0 0;
+      max-width: 40ch;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .info-card {
+      border-radius: var(--r-lg);
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      padding: 16px;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(246,163,58,.36);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+    }
+
+    .info-card .label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+    }
+
+    .info-card .value {
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .current-conditions {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+
+    .big-weather, .rain-card {
+      border-radius: var(--r-lg);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      padding: 18px;
+      min-height: 150px;
+    }
+
+    .big-weather {
+      background:
+        linear-gradient(135deg, rgba(246,163,58,.14), rgba(255,255,255,.04)),
+        rgba(255,255,255,.05);
+    }
+
+    .big-weather .temp {
+      font-size: clamp(2.8rem, 7vw, 5rem);
+      font-weight: 800;
+      letter-spacing: -0.08em;
+      line-height: 0.95;
+    }
+
+    .big-weather .cond {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .rain-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .rain-card .caption { color: var(--muted); line-height: 1.45; }
+    .rain-card .pct {
+      font-size: 2.9rem;
+      font-weight: 800;
+      letter-spacing: -0.07em;
+      color: var(--accent-2);
+      line-height: 1;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 2px;
+    }
+
+    .chip {
+      padding: 10px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-size: 0.88rem;
+      line-height: 1;
+    }
+
+    .footer-note {
+      color: var(--muted-2);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+
+    .error-banner {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 170, 120, 0.22);
+      background: rgba(255, 170, 120, 0.08);
+      color: #ffd9bf;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .terrain-shell {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1.4fr 0.9fr;
+    }
+
+    .terrain-hero, .stats-card, .profile-card, .mini-card {
+      border-radius: var(--r-lg);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .terrain-hero {
+      min-height: 320px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(500px 260px at 20% 18%, rgba(246,163,58,.18), transparent 55%),
+        radial-gradient(700px 320px at 80% 70%, rgba(92,144,196,.16), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    }
+
+    .terrain-hero .label {
+      position: absolute;
+      left: 18px;
+      top: 16px;
+      z-index: 2;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .terrain-overlay {
+      position: absolute;
+      inset: 0;
+      opacity: 0.33;
+      background-image:
+        linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,1), rgba(0,0,0,.3));
+    }
+
+    .terrain-surface {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(8,13,18,0) 0%, rgba(8,13,18,.68) 100%),
+        radial-gradient(900px 320px at 50% 58%, rgba(6,13,20,.02), rgba(0,0,0,.88)),
+        linear-gradient(180deg, rgba(25, 42, 61, 0.3), rgba(6, 12, 18, 0.92));
+      clip-path: polygon(0% 100%, 0% 74%, 8% 69%, 14% 80%, 22% 55%, 31% 42%, 41% 63%, 48% 31%, 58% 47%, 67% 20%, 77% 35%, 86% 25%, 94% 40%, 100% 34%, 100% 100%);
+      transform: translateZ(0);
+    }
+
+    .north-tag {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      z-index: 2;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .terrain-footer {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .terrain-profile-wrap {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      padding: 12px;
+    }
+
+    .terrain-profile {
+      width: 100%;
+      height: 130px;
+      display: block;
+    }
+
+    .axis-labels {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted-2);
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+
+    .stats-card {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .stat-row span:first-child { color: var(--muted); }
+    .stat-row span:last-child { font-weight: 700; }
+
+    .profile-card {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .profile-card h3, .stats-card h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .mini-card {
+      padding: 14px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .mini-card .k { color: var(--muted); font-size: 0.82rem; }
+    .mini-card .v { font-size: 1.05rem; font-weight: 700; }
+
+    .terrain-grid-bottom {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .placeholder {
+      padding: 18px;
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .map-panel { min-height: 420px; }
+      .terrain-shell { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .wrap { width: min(100vw - 18px, 1280px); margin-top: 10px; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .location-grid, .current-conditions, .metric-strip, .terrain-grid-bottom { grid-template-columns: 1fr; }
+      .panel-inner { padding: 18px; }
+      .hero { padding: 14px; border-radius: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+
+  <main class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">⊕</div>
+        <div>
+          <h1>Topo Weather</h1>
+          <p>Location-first weather, terrain, and water intelligence</p>
+        </div>
+      </div>
+      <div class="status-pill" id="statusPill">Requesting your location…</div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="panel map-panel">
+  <div id="map"></div>
+
+  <div class="map-card-header">
+    <p class="title-mini" id="placeTitle">Your location</p>
+    <p class="subtitle-mini" id="placeSubtitle">Waiting for GPS data</p>
+  </div>
+
+  <div class="map-card-footer">
+    <div class="metric-strip">
+      <div class="metric-chip" title="The air temperature around your current location.">
+        <span class="k">Current temp</span>
+        <span class="v" id="currentTemp">—</span>
+      </div>
+      <div class="metric-chip" title="Highest and lowest forecast temperatures for today.">
+        <span class="k">High / Low</span>
+        <span class="v" id="highLow">—</span>
+      </div>
+      <div class="metric-chip" title="Weather summary right now.">
+        <span class="k">Conditions</span>
+        <span class="v" id="summary">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+        <aside class="panel location-panel">
+          <div class="tabbar" role="tablist" aria-label="Main tabs">
+            <button class="tab active" data-tab="current" role="tab" aria-selected="true">Current</button>
+            <button class="tab" data-tab="terrain" role="tab" aria-selected="false">Terrain</button>
+            <button class="tab" data-tab="hydrology" role="tab" aria-selected="false">Hydrology</button>
+            <button class="tab" data-tab="tides" role="tab" aria-selected="false">Tides</button>
+          </div>
+
+          <div class="tabview active" id="tab-current" role="tabpanel">
+            <div class="greeting">
+              <h2 id="greeting">Hello.</h2>
+              <p id="greetingBody">I am finding your location and pulling the live conditions for this spot.</p>
+            </div>
+
+            <div class="location-grid" style="margin-top:16px;">
+              <div class="info-card" title="The closest readable place name from reverse geocoding.">
+                <div class="label">📍 Location</div>
+                <div class="value" id="locationName">Unknown</div>
+              </div>
+              <div class="info-card" title="The approximate coordinates used to fetch weather data.">
+                <div class="label">🧭 Coordinates</div>
+                <div class="value" id="coordinates">—</div>
+              </div>
+              <div class="info-card" title="Whether the browser could access your GPS coordinates.">
+                <div class="label">📡 GPS</div>
+                <div class="value" id="gpsStatus">Pending</div>
+              </div>
+              <div class="info-card" title="The current weather code interpreted into a readable summary.">
+                <div class="label">☁️ Weather code</div>
+                <div class="value" id="weatherCode">—</div>
+              </div>
+            </div>
+
+            <div class="current-conditions" style="margin-top:16px;">
+              <div class="big-weather" title="A quick look at the current atmospheric state.">
+                <div class="temp" id="tempBig">—</div>
+                <div class="cond" id="condBig">Current conditions will appear here.</div>
+              </div>
+              <div class="rain-card" title="Chance of precipitation for the current hour or nearest forecast interval.">
+                <div>
+                  <div class="caption">Chance of rain</div>
+                  <div class="pct" id="rainPct">—</div>
+                </div>
+                <div class="caption" id="rainText">Rain probability is loading.</div>
+              </div>
+            </div>
+
+            <div class="chips" style="margin-top:14px;">
+              <div class="chip" id="sunChip">☀️ Sunrise — · Sunset —</div>
+              <div class="chip" id="windChip">💨 Wind —</div>
+              <div class="chip" id="airChip">🌫 Air quality —</div>
+              <div class="chip" id="uvChip">🟠 UV —</div>
+              <div class="chip" id="elevChip">⛰ Elevation —</div>
+              <div class="chip" id="orientChip">🧭 Orientation —</div>
+            </div>
+
+            <div class="footer-note" id="note" style="margin-top:14px;">
+              This is the main landing view. The next tabs can add terrain profiles, hydrology, and tides.
+            </div>
+          </div>
+
+          <div class="tabview" id="tab-terrain" role="tabpanel" aria-hidden="true">
+            <div class="greeting">
+              <h2>Terrain</h2>
+              <p>Topographic snapshot within roughly 1–2 km of your location.</p>
+            </div>
+
+            <div class="terrain-shell" style="margin-top:16px;">
+              <div>
+                <div class="terrain-hero">
+                  <div class="label" id="terrainHeadline">Loading local relief…</div>
+                  <div class="north-tag">N ↑</div>
+                  <div class="terrain-overlay"></div>
+                  <div class="terrain-surface" id="terrainSurface"></div>
+                  <div class="terrain-footer">
+                    <div class="terrain-profile-wrap">
+                      <svg class="terrain-profile" id="terrainProfile" viewBox="0 0 700 130" preserveAspectRatio="none" aria-label="Elevation profile"></svg>
+                      <div class="axis-labels">
+                        <span>0 m</span>
+                        <span>500 m</span>
+                        <span>1 km</span>
+                        <span>1.5 km</span>
+                        <span>2 km</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="terrain-grid-bottom" style="margin-top:14px;">
+                  <div class="mini-card"><div class="k">Current elevation</div><div class="v" id="terrElev">—</div></div>
+                  <div class="mini-card"><div class="k">Vertical relief</div><div class="v" id="terrRelief">—</div></div>
+                  <div class="mini-card"><div class="k">Average slope</div><div class="v" id="terrSlope">—</div></div>
+                </div>
+              </div>
+
+              <div class="stats-card">
+                <h3>Terrain stats</h3>
+                <div class="stat-row"><span>Highest point</span><span id="terrHigh">—</span></div>
+                <div class="stat-row"><span>Lowest point</span><span id="terrLow">—</span></div>
+                <div class="stat-row"><span>Dominant aspect</span><span id="terrAspect">—</span></div>
+                <div class="stat-row"><span>Profile length</span><span>2 km</span></div>
+                <div class="stat-row"><span>Data source</span><span id="terrSource">Local estimate</span></div>
+                <div class="footer-note">This first terrain tab uses a sampled elevation profile. Later we can swap in real DEM/Topo data and a zoomable map.</div>
+              </div>
+            </div>
+          </div>
+
+         <div class="tabview" id="tab-hydrology" role="tabpanel" aria-hidden="true">
+
+  <div class="greeting">
+    <h2>Hydrology</h2>
+    <p>Nearby rivers, lakes, streams, and ocean proximity.</p>
+  </div>
+
+
+  <div class="location-grid" style="margin-top:16px;">
+
+    <div class="info-card">
+      <div class="label">🌊 Nearest water feature</div>
+      <div class="value" id="nearestWater">Searching...</div>
+    </div>
+
+
+    <div class="info-card">
+      <div class="label">📏 Distance</div>
+      <div class="value" id="waterDistance">—</div>
+    </div>
+
+
+    <div class="info-card">
+      <div class="label">🌐 Water type</div>
+      <div class="value" id="waterType">—</div>
+    </div>
+
+
+    <div class="info-card">
+      <div class="label">🌊 Ocean proximity</div>
+      <div class="value" id="oceanDistance">Calculating...</div>
+    </div>
+
+  </div>
+
+
+  <div class="info-card" style="margin-top:16px;">
+      <div class="label">🗺 Nearby water bodies</div>
+      <div class="value" id="waterList">
+        Loading...
+      </div>
+  </div>
+
+
+</div>
+
+         <div class="tabview" id="tab-tides" role="tabpanel" aria-hidden="true">
+  <div class="greeting">
+    <h2>Tides</h2>
+    <p>Useful when you are close enough to the ocean or a tidal waterbody.</p>
+  </div>
+
+  <div class="location-grid" style="margin-top:16px;">
+    <div class="info-card">
+      <div class="label">🌊 Tide station</div>
+      <div class="value" id="tideStation">Searching...</div>
+    </div>
+
+    <div class="info-card">
+      <div class="label">📍 Tide status</div>
+      <div class="value" id="tideStatus">—</div>
+    </div>
+
+    <div class="info-card">
+      <div class="label">⬆ Next high tide</div>
+      <div class="value" id="tideNextHigh">—</div>
+    </div>
+
+    <div class="info-card">
+      <div class="label">⬇ Next low tide</div>
+      <div class="value" id="tideNextLow">—</div>
+    </div>
+  </div>
+
+  <div class="info-card" style="margin-top:16px;">
+    <div class="label">🗒 Tide notes</div>
+    <div class="value" id="tideNotes">Loading...</div>
+  </div>
+</div>
+
+          <div class="error-banner" id="errorBanner"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+const map = L.map('map', { zoomControl: true }).setView([49.2827, -123.1207], 11);
+
+setTimeout(() => map.invalidateSize(), 0);
+window.addEventListener('resize', () => map.invalidateSize());
+
+const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+});
+
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 19,
+  attribution: 'Tiles &copy; Esri'
+});
+
+let currentMarker = null;
+
+function setMapLocation(lat, lon, label) {
+  map.setView([lat, lon], 13, { animate: true });
+
+  if (currentMarker) map.removeLayer(currentMarker);
+  currentMarker = L.marker([lat, lon]).addTo(map);
+  currentMarker.bindPopup(label || 'Current location').openPopup();
+}
+
+    const els = {
+      statusPill: document.getElementById('statusPill'),
+      placeTitle: document.getElementById('placeTitle'),
+      placeSubtitle: document.getElementById('placeSubtitle'),
+      currentTemp: document.getElementById('currentTemp'),
+      highLow: document.getElementById('highLow'),
+      summary: document.getElementById('summary'),
+      greeting: document.getElementById('greeting'),
+      greetingBody: document.getElementById('greetingBody'),
+      locationName: document.getElementById('locationName'),
+      coordinates: document.getElementById('coordinates'),
+      gpsStatus: document.getElementById('gpsStatus'),
+      weatherCode: document.getElementById('weatherCode'),
+      tempBig: document.getElementById('tempBig'),
+      condBig: document.getElementById('condBig'),
+      rainPct: document.getElementById('rainPct'),
+      rainText: document.getElementById('rainText'),
+      sunChip: document.getElementById('sunChip'),
+      windChip: document.getElementById('windChip'),
+      airChip: document.getElementById('airChip'),
+      uvChip: document.getElementById('uvChip'),
+      elevChip: document.getElementById('elevChip'),
+      orientChip: document.getElementById('orientChip'),
+      note: document.getElementById('note'),
+      errorBanner: document.getElementById('errorBanner'),
+      terrainHeadline: document.getElementById('terrainHeadline'),
+      terrainProfile: document.getElementById('terrainProfile'),
+      terrElev: document.getElementById('terrElev'),
+      terrRelief: document.getElementById('terrRelief'),
+      terrSlope: document.getElementById('terrSlope'),
+      terrHigh: document.getElementById('terrHigh'),
+      terrLow: document.getElementById('terrLow'),
+      terrAspect: document.getElementById('terrAspect'),
+      terrSource: document.getElementById('terrSource'),
+      terrainSurface: document.getElementById('terrainSurface'),
+      nearestWater: document.getElementById('nearestWater'),
+    waterDistance: document.getElementById('waterDistance'),
+    waterType: document.getElementById('waterType'),
+    oceanDistance: document.getElementById('oceanDistance'),
+    waterList: document.getElementById('waterList'),   
+    tideStation: document.getElementById('tideStation'),
+tideStatus: document.getElementById('tideStatus'),
+tideNextHigh: document.getElementById('tideNextHigh'),
+tideNextLow: document.getElementById('tideNextLow'),
+tideNotes: document.getElementById('tideNotes'),
+    };
+
+    const weatherCodeMap = new Map([
+      [0, 'Clear sky'], [1, 'Mainly clear'], [2, 'Partly cloudy'], [3, 'Overcast'],
+      [45, 'Fog'], [48, 'Rime fog'], [51, 'Light drizzle'], [53, 'Moderate drizzle'],
+      [55, 'Dense drizzle'], [61, 'Slight rain'], [63, 'Moderate rain'], [65, 'Heavy rain'],
+      [71, 'Slight snow'], [73, 'Moderate snow'], [75, 'Heavy snow'], [80, 'Rain showers'],
+      [81, 'Heavy showers'], [82, 'Violent showers'], [95, 'Thunderstorm'], [96, 'Thunderstorm with hail'], [99, 'Thunderstorm with hail']
+    ]);
+
+    function fmt(n, digits = 1) { return Number.isFinite(n) ? n.toFixed(digits) : '—'; }
+    function km(n) { return Number.isFinite(n) ? `${Math.round(n)} m` : '—'; }
+
+    function cardinalFromBearing(bearing) {
+      if (!Number.isFinite(bearing)) return 'Unknown';
+      const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      return dirs[Math.round(((bearing % 360) / 45)) % 8];
+    }
+
+    function hourMinute(isoString) {
+      if (!isoString) return '—';
+      const d = new Date(isoString);
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function setStatus(text) { els.statusPill.textContent = text; }
+    function showError(message) {
+      els.errorBanner.style.display = 'block';
+      els.errorBanner.textContent = message;
+    }
+    function clearError() {
+      els.errorBanner.style.display = 'none';
+      els.errorBanner.textContent = '';
+    }
+
+    function setTab(name) {
+      document.querySelectorAll('.tab').forEach(btn => {
+        const active = btn.dataset.tab === name;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      document.querySelectorAll('.tabview').forEach(view => {
+        const active = view.id === `tab-${name}`;
+        view.classList.toggle('active', active);
+        view.setAttribute('aria-hidden', active ? 'false' : 'true');
+      });
+    }
+
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => setTab(btn.dataset.tab));
+    });
+
+    async function fetchWeather(lat, lon) {
+      const url = new URL('https://api.open-meteo.com/v1/forecast');
+      url.searchParams.set('latitude', lat);
+      url.searchParams.set('longitude', lon);
+      url.searchParams.set('current', [
+        'temperature_2m', 'weather_code', 'wind_speed_10m', 'wind_direction_10m', 'relative_humidity_2m'
+      ].join(','));
+      url.searchParams.set('hourly', ['precipitation_probability', 'uv_index', 'cloud_cover'].join(','));
+      url.searchParams.set('daily', ['temperature_2m_max', 'temperature_2m_min', 'sunrise', 'sunset'].join(','));
+      url.searchParams.set('temperature_unit', 'celsius');
+      url.searchParams.set('wind_speed_unit', 'kmh');
+      url.searchParams.set('timezone', 'auto');
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Weather fetch failed');
+      return res.json();
+    }
+
+    async function reverseGeocode(lat, lon) {
+      const url = new URL('https://nominatim.openstreetmap.org/reverse');
+      url.searchParams.set('format', 'jsonv2');
+      url.searchParams.set('lat', lat);
+      url.searchParams.set('lon', lon);
+      url.searchParams.set('zoom', '12');
+      url.searchParams.set('addressdetails', '1');
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Reverse geocoding failed');
+      return res.json();
+    }
+
+    async function fetchElevations(points) {
+      // Best-effort. If the API fails or is unavailable, fall back to a synthetic profile.
+      const locs = points.map(p => `${p.lat},${p.lon}`).join('|');
+      const proxyUrl = `http://127.0.0.1:8001/elevation?locations=${encodeURIComponent(locs)}`;
+      try {
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error('Elevation fetch failed');
+        const json = await res.json();
+        const results = json.results || json.data || [];
+        const elevations = results.map(r => Number(r.elevation)).filter(Number.isFinite);
+        if (elevations.length === points.length) return elevations;
+      } catch (err) {
+        console.warn('Elevation proxy request failed', err);
+      }
+      return null;
+    }
+
+    function syntheticProfile(lat, lon, baseElev) {
+      const points = [];
+      const phases = [0, 1.1, 2.4, 3.5, 4.7, 5.7, 7.1];
+      for (let i = 0; i < 7; i++) {
+        const n = Math.sin((lat + i * 0.14) * 9.3) * 18 + Math.cos((lon - i * 0.1) * 8.7) * 12;
+        const bump = Math.sin(phases[i]) * 22 + Math.cos(phases[i] * 0.7) * 14;
+        points.push(Math.max(0, Math.round(baseElev + n + bump)));
+      }
+      return points;
+    }
+
+    function drawRealProfile(elevations){
+
+    const svg = els.terrainProfile;
+
+    const w = 700;
+    const h = 130;
+
+    const pad = 15;
+
+    const min =
+        Math.min(...elevations);
+
+    const max =
+        Math.max(...elevations);
+
+    const range =
+        Math.max(max-min,1);
+
+    const step =
+        (w-2*pad)/(elevations.length-1);
+
+    let path="";
+
+    elevations.forEach((e,i)=>{
+
+        const x =
+            pad+i*step;
+
+        const y =
+            h-pad-
+            (e-min)/range*
+            (h-2*pad);
+
+        path +=
+            (i==0?"M":"L")+x+" "+y+" ";
+
+    });
+
+    svg.innerHTML=
+`
+<path d="${path}
+L ${w-pad} ${h-pad}
+L ${pad} ${h-pad}
+Z"
+fill="rgba(246,163,58,.25)"/>
+
+<path
+d="${path}"
+fill="none"
+stroke="#FFD08A"
+stroke-width="3"/>
+`;
+
+}
+
+    function nearestHourlyIndex(times) {
+      const now = Date.now();
+      let best = 0;
+      let minDiff = Infinity;
+      times.forEach((t, i) => {
+        const diff = Math.abs(new Date(t).getTime() - now);
+        if (diff < minDiff) { minDiff = diff; best = i; }
+      });
+      return best;
+    }
+
+    async function fetchHydrology(lat, lon) {
+  const query = `
+  [out:json][timeout:25];
+
+  (
+    way(around:5000,${lat},${lon})["waterway"];
+    way(around:5000,${lat},${lon})["natural"="water"];
+    way(around:5000,${lat},${lon})["natural"="wetland"];
+  );
+
+  out tags center;
+  `;
+
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: query,
+        signal: controller.signal
+      });
+
+      clearTimeout(timer);
+
+      if (!response.ok) throw new Error(`Overpass ${response.status}`);
+
+      const data = await response.json();
+      return Array.isArray(data.elements) ? data.elements : [];
+    } catch (err) {
+      console.warn("Hydrology lookup failed on", endpoint, err);
+    }
+  }
+
+  throw new Error("Hydrology lookup failed on all endpoints");
+}
+
+function displayHydrology(results){
+
+  if(!results || results.length === 0){
+
+    els.nearestWater.textContent =
+      "No nearby water found";
+
+    els.waterList.textContent =
+      "No rivers, lakes, or streams within 5 km";
+
+    return;
+
+  }
+
+
+  const first = results[0];
+
+  const tags = first.tags || {};
+
+
+  const name =
+    tags.name ||
+    "Unnamed water feature";
+
+
+  let type =
+    tags.waterway ||
+    tags.natural ||
+    "water";
+
+
+  els.nearestWater.textContent = name;
+
+  els.waterType.textContent = type;
+
+  els.waterDistance.textContent =
+    "Within 5 km";
+
+
+  els.waterList.textContent =
+    results
+    .slice(0,5)
+    .map(x => x.tags?.name || "Unnamed")
+    .join(", ");
+
+}
+
+    
+async function loadTerrain(lat, lon) {
+
+    const url =
+        `http://127.0.0.1:8001/elevation?locations=${lat},${lon}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const elevation =
+        data.results[0].elevation;
+
+    els.terrElev.textContent =
+        `${Math.round(elevation)} m`;
+
+    els.elevChip.textContent =
+        `⛰ Elevation ${Math.round(elevation)} m`;
+
+    els.terrainHeadline.textContent =
+        `Local elevation ${Math.round(elevation)} m`;
+
+    //------------------------------------------------------------------
+    // sample a real 2 km east-west profile
+    //------------------------------------------------------------------
+
+    const samples = 40;
+    const step = 0.00055;       // ~55 m
+
+    let locations = [];
+
+    for(let i=-20;i<=20;i++){
+
+        locations.push(
+            `${lat},${lon+i*step}`
+        );
+
+    }
+
+    const profileURL =
+        "http://127.0.0.1:8001/elevation?locations=" +
+        locations.join("|");
+
+    const profileResponse =
+        await fetch(profileURL);
+
+    const profile =
+        await profileResponse.json();
+
+    const elevations =
+        profile.results.map(x=>x.elevation);
+
+    const low =
+        Math.min(...elevations);
+
+    const high =
+        Math.max(...elevations);
+
+    const relief =
+        high-low;
+
+    drawRealProfile(elevations);
+
+    els.terrHigh.textContent =
+        `${Math.round(high)} m`;
+
+    els.terrLow.textContent =
+        `${Math.round(low)} m`;
+
+    els.terrRelief.textContent =
+        `${Math.round(relief)} m`;
+
+    //--------------------------------------------------------
+
+    let slope = 0;
+
+    for(let i=1;i<elevations.length;i++){
+
+        slope +=
+            Math.abs(
+                elevations[i]-elevations[i-1]
+            );
+
+    }
+
+    slope =
+        slope/(samples*55);
+
+    els.terrSlope.textContent =
+        `${(slope*100).toFixed(1)} %`;
+
+    //--------------------------------------------------------
+
+    if(elevations[elevations.length-1] >
+       elevations[0])
+
+        els.terrAspect.textContent =
+            "E";
+
+    else
+
+        els.terrAspect.textContent =
+            "W";
+
+    els.terrSource.textContent =
+        "SRTM90 DEM";
+}
+    function haversine(lat1, lon1, lat2, lon2){
+
+  const R = 6371000;
+
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+
+  const dp =
+    (lat2-lat1) * Math.PI / 180;
+
+  const dl =
+    (lon2-lon1) * Math.PI / 180;
+
+
+  const a =
+    Math.sin(dp/2)**2 +
+    Math.cos(p1) *
+    Math.cos(p2) *
+    Math.sin(dl/2)**2;
+
+
+  return R * 2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1-a)
+    );
+
+}
+    async function calculateOceanProximity(lat, lon){
+
+  const query = `
+  [out:json][timeout:180];
+
+  (
+    way(around:50000,${lat},${lon})
+      ["natural"="coastline"];
+  );
+
+  out geom;
+  `;
+
+
+  try {
+
+    const response = await fetch(
+      "https://overpass-api.de/api/interpreter",
+      {
+        method:"POST",
+        body:query
+      }
+    );
+
+
+const text = await response.text();
+
+if (!text.trim().startsWith("{")) {
+    throw new Error(text);
+}
+
+const data = JSON.parse(text);
+
+    if(!data.elements || data.elements.length === 0){
+      return null;
+    }
+
+
+    let closest = Infinity;
+
+
+    for(const element of data.elements){
+
+      if(!element.geometry) continue;
+
+
+      for(const point of element.geometry){
+
+        const distance = haversine(
+          lat,
+          lon,
+          point.lat,
+          point.lon
+        );
+
+
+        if(distance < closest){
+          closest = distance;
+        }
+
+      }
+
+    }
+
+
+    return closest;
+
+  }
+
+
+  catch(e){
+
+    console.error(
+      "Ocean lookup failed:",
+      e
+    );
+
+    return null;
+
+  }
+
+}
+async function fetchAQI(lat, lon) {
+  const url = new URL('https://air-quality-api.open-meteo.com/v1/air-quality');
+  url.searchParams.set('latitude', lat);
+  url.searchParams.set('longitude', lon);
+  url.searchParams.set(
+    'current',
+    [
+      'us_aqi',
+      'european_aqi',
+      'pm2_5',
+      'pm10',
+      'nitrogen_dioxide',
+      'ozone',
+      'sulphur_dioxide',
+      'carbon_monoxide'
+    ].join(',')
+  );
+  url.searchParams.set('timezone', 'auto');
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error('AQI fetch failed');
+  return res.json();
+}
+
+function aqiLabel(aqi) {
+  if (!Number.isFinite(aqi)) return 'Unknown';
+  if (aqi <= 50) return 'Good';
+  if (aqi <= 100) return 'Moderate';
+  if (aqi <= 150) return 'Unhealthy for sensitive groups';
+  if (aqi <= 200) return 'Unhealthy';
+  if (aqi <= 300) return 'Very unhealthy';
+  return 'Hazardous';
+}
+
+async function loadAQI(lat, lon) {
+  try {
+    const data = await fetchAQI(lat, lon);
+    const cur = data.current || {};
+
+    const aqi =
+      Number.isFinite(cur.european_aqi) ? cur.european_aqi :
+      Number.isFinite(cur.us_aqi) ? cur.us_aqi :
+      NaN;
+
+    if (!Number.isFinite(aqi)) {
+      els.airChip.textContent = '🌫 AQI —';
+      return;
+    }
+
+    els.airChip.textContent = `🌫 AQI ${Math.round(aqi)} · ${aqiLabel(aqi)}`;
+  } catch (err) {
+    console.warn('AQI lookup failed', err);
+    els.airChip.textContent = '🌫 AQI unavailable';
+  }
+}
+
+function yyyymmdd(date) {
+  return date.toISOString().slice(0, 10).replaceAll('-', '');
+}
+
+function formatTideEvent(event) {
+  if (!event) return '—';
+  const time = new Date(event.t);
+  const value = Number.parseFloat(event.v);
+  const when = time.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+  return `${when} · ${Number.isFinite(value) ? value.toFixed(2) + ' m' : '—'}`;
+}
+
+async function fetchNoaaStations() {
+  const url = 'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?units=metric';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Station list fetch failed');
+  const json = await res.json();
+
+  const raw = Array.isArray(json.stations)
+    ? json.stations
+    : Array.isArray(json.stationList)
+      ? json.stationList
+      : [];
+
+  return raw
+    .map(s => ({
+      id: s.id ?? s.stationId ?? s.station_id,
+      name: s.name ?? s.longName ?? s.shortName ?? 'Unnamed station',
+      lat: Number(s.lat ?? s.latitude),
+      lon: Number(s.lng ?? s.lon ?? s.longitude)
+    }))
+    .filter(s => s.id && Number.isFinite(s.lat) && Number.isFinite(s.lon));
+}
+
+function nearestStation(lat, lon, stations) {
+  let best = null;
+  let bestD = Infinity;
+
+  for (const s of stations) {
+    const d = haversine(lat, lon, s.lat, s.lon);
+    if (d < bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+
+  if (!best) return null;
+  return { ...best, distanceMeters: bestD };
+}
+
+async function fetchNoaaTidePredictions(stationId) {
+  const url = new URL('https://api.tidesandcurrents.noaa.gov/api/prod/datagetter');
+  url.searchParams.set('product', 'predictions');
+  url.searchParams.set('application', 'topo_weather');
+  url.searchParams.set('begin_date', yyyymmdd(new Date()));
+  url.searchParams.set('end_date', yyyymmdd(new Date(Date.now() + 48 * 3600 * 1000)));
+  url.searchParams.set('station', stationId);
+  url.searchParams.set('datum', 'MLLW');
+  url.searchParams.set('time_zone', 'lst_ldt');
+  url.searchParams.set('units', 'metric');
+  url.searchParams.set('interval', 'hilo');
+  url.searchParams.set('format', 'json');
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error('Tide prediction fetch failed');
+  return res.json();
+}
+
+async function loadTides(lat, lon, oceanDistanceMeters) {
+  els.tideStation.textContent = 'Searching tide stations...';
+  els.tideStatus.textContent = '—';
+  els.tideNextHigh.textContent = '—';
+  els.tideNextLow.textContent = '—';
+  els.tideNotes.textContent = 'Looking for a nearby tide station.';
+
+  if (Number.isFinite(oceanDistanceMeters) && oceanDistanceMeters > 50000) {
+    els.tideStation.textContent = 'No tidal waters nearby';
+    els.tideStatus.textContent = 'Inland';
+    els.tideNotes.textContent = 'You are too far from the coast for tide predictions to be useful.';
+    return;
+  }
+
+  try {
+    const stations = await fetchNoaaStations();
+    const nearest = nearestStation(lat, lon, stations);
+
+    if (!nearest) {
+      els.tideStation.textContent = 'No station found';
+      els.tideStatus.textContent = 'Unavailable';
+      els.tideNotes.textContent = 'A tide station map for your region has not been added yet.';
+      return;
+    }
+
+    const tideData = await fetchNoaaTidePredictions(nearest.id);
+    const preds = Array.isArray(tideData.predictions) ? tideData.predictions : [];
+
+    const highs = preds.filter(p => String(p.type || p.hilo || '').toUpperCase().startsWith('H'));
+    const lows = preds.filter(p => String(p.type || p.hilo || '').toUpperCase().startsWith('L'));
+
+    els.tideStation.textContent = `${nearest.name}`;
+    els.tideStatus.textContent = `${(nearest.distanceMeters / 1000).toFixed(1)} km away`;
+
+    els.tideNextHigh.textContent = highs[0] ? formatTideEvent(highs[0]) : 'No high tide found';
+    els.tideNextLow.textContent = lows[0] ? formatTideEvent(lows[0]) : 'No low tide found';
+
+    els.tideNotes.textContent = `Nearest station: ${nearest.name}.`;
+
+  } catch (err) {
+    console.warn('Tide lookup failed', err);
+    els.tideStation.textContent = 'Tide data unavailable';
+    els.tideStatus.textContent = 'Lookup failed';
+    els.tideNotes.textContent = 'The station lookup or prediction request failed.';
+  }
+}
+    async function loadFromGps(position) {
+      clearError();
+      const { latitude: lat, longitude: lon, altitude } = position.coords;
+      els.coordinates.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      els.gpsStatus.textContent = 'Connected';
+      setStatus('GPS acquired — loading live weather…');
+      els.note.textContent = 'Loading live weather and nearby place information.';
+
+      let placeName = `(${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+      try {
+        const place = await reverseGeocode(lat, lon);
+        placeName = place.address?.city || place.address?.town || place.address?.village || place.address?.county || place.display_name || placeName;
+      } catch {
+        // Fine to ignore. Weather still works.
+      }
+
+      
+      els.locationName.textContent = placeName;
+      els.placeTitle.textContent = placeName;
+      els.placeSubtitle.textContent = 'Live forecast for your current location';
+      els.greeting.textContent = placeName;
+      els.greetingBody.textContent = "Today's weather snapshot";
+      setMapLocation(lat, lon, placeName);
+      
+      const data = await fetchWeather(lat, lon);
+      const current = data.current;
+      const daily = data.daily;
+      const hourly = data.hourly;
+      const idx = nearestHourlyIndex(hourly.time);
+
+      const precip = hourly.precipitation_probability?.[idx];
+      const uv = hourly.uv_index?.[idx];
+      const cloud = hourly.cloud_cover?.[idx];
+      const code = current.weather_code;
+      const summary = weatherCodeMap.get(code) || `Weather code ${code}`;
+      const high = daily.temperature_2m_max?.[0];
+      const low = daily.temperature_2m_min?.[0];
+      const sunrise = daily.sunrise?.[0];
+      const sunset = daily.sunset?.[0];
+      const windSpeed = current.wind_speed_10m;
+      const windDir = current.wind_direction_10m;
+      const baseElev = Number.isFinite(altitude) ? altitude : 100;
+      const elevation = Number.isFinite(altitude) ? `${Math.round(altitude)} m` : 'Unknown';
+      const humidity = current.relative_humidity_2m;
+
+      els.currentTemp.textContent = `${fmt(current.temperature_2m, 0)}°`;
+      els.highLow.textContent = `${fmt(high, 0)}° / ${fmt(low, 0)}°`;
+      els.summary.textContent = summary;
+      els.tempBig.textContent = `${fmt(current.temperature_2m, 0)}°C`;
+      els.condBig.textContent = `${summary}${Number.isFinite(cloud) ? ` · ${Math.round(cloud)}% clouds` : ''}${Number.isFinite(humidity) ? ` · ${Math.round(humidity)}% humidity` : ''}`;
+      els.weatherCode.textContent = `${code} · ${summary}`;
+      els.rainPct.textContent = `${Number.isFinite(precip) ? Math.round(precip) : '—'}%`;
+      els.rainText.textContent = Number.isFinite(precip)
+        ? `Forecast rain chance near the current hour is ${Math.round(precip)}%.`
+        : 'Rain probability is unavailable for this location.';
+      els.sunChip.textContent = `☀️ Sunrise ${hourMinute(sunrise)} · Sunset ${hourMinute(sunset)}`;
+      els.windChip.textContent = `💨 Wind ${fmt(windSpeed, 0)} km/h · ${cardinalFromBearing(windDir)}`;
+      els.airChip.textContent = `🌫 AQI loading...`;
+      els.uvChip.textContent = `🟠 UV ${Number.isFinite(uv) ? fmt(uv, 1) : '—'}`;
+      els.elevChip.textContent = `⛰ Elevation ${elevation}`;
+      els.orientChip.textContent = `🧭 Orientation ${cardinalFromBearing(windDir)}`;
+      setStatus('Live conditions loaded');
+      els.note.textContent = 'The next tabs can add terrain profiles, hydrology, rivers, oceans, and tides.';
+
+      
+      try {
+  await loadTerrain(lat, lon);
+} catch (err) {
+  console.error("Terrain failed:", err);
+  els.terrainHeadline.textContent = "Terrain unavailable";
+  els.terrSource.textContent = "Terrain lookup failed";
+}
+
+await loadAQI(lat, lon);
+
+try {
+  const water = await fetchHydrology(lat, lon);
+  displayHydrology(water);
+} catch (err) {
+  console.error("Hydrology failed:", err);
+  els.nearestWater.textContent = "Hydrology unavailable";
+  els.waterType.textContent = "—";
+  els.waterDistance.textContent = "—";
+  els.waterList.textContent = "Could not load nearby water data.";
+}
+
+let ocean = null;
+try {
+  els.oceanDistance.textContent = "Searching coastline...";
+  ocean = await calculateOceanProximity(lat, lon);
+
+  if (ocean !== null) {
+    els.oceanDistance.textContent =
+      ocean < 1000 ? `${Math.round(ocean)} m` : `${(ocean / 1000).toFixed(1)} km`;
+  } else {
+    els.oceanDistance.textContent = "No coastline nearby";
+  }
+} catch (err) {
+  console.error("Ocean proximity failed:", err);
+  els.oceanDistance.textContent = "Unavailable";
+}
+
+await loadTides(lat, lon, ocean);
+if(ocean){
+
+  if(ocean < 1000){
+    els.oceanDistance.textContent =
+      `${Math.round(ocean)} m`;
+  }
+
+  else{
+    els.oceanDistance.textContent =
+      `${(ocean/1000).toFixed(1)} km`;
+  }
+
+}
+
+else{
+
+  els.oceanDistance.textContent =
+    "No coastline nearby";
+
+}
+    }
+
+    function loadFallback(message) {
+      setMapLocation(49.2827, -123.1207, 'Vancouver, BC');
+      els.gpsStatus.textContent = 'Blocked';
+      els.placeTitle.textContent = 'Location unavailable';
+      els.placeSubtitle.textContent = 'Enable location access to load live data';
+      els.locationName.textContent = 'GPS permission needed';
+      els.coordinates.textContent = '—';
+      els.currentTemp.textContent = '—';
+      els.highLow.textContent = '—';
+      els.summary.textContent = 'No data';
+      els.tempBig.textContent = '—';
+      els.condBig.textContent = 'Allow location access to see live conditions.';
+      els.rainPct.textContent = '—';
+      els.rainText.textContent = 'Rain chance will appear once location is allowed.';
+      els.sunChip.textContent = '☀️ Sunrise — · Sunset —';
+      els.windChip.textContent = '💨 Wind —';
+      els.airChip.textContent = '🌫 Air quality —';
+      els.uvChip.textContent = '🟠 UV —';
+      els.elevChip.textContent = '⛰ Elevation —';
+      els.orientChip.textContent = '🧭 Orientation —';
+      els.greeting.textContent = 'Hello.';
+      els.greetingBody.textContent = 'Turn on location access and I will fill in the forecast for where you are.';
+      setStatus('Waiting for GPS permission');
+      els.terrainHeadline.textContent = 'Terrain will appear after location access';
+      els.terrSource.textContent = 'No data yet';
+      if (message) showError(message);
+    }
+
+    if (!('geolocation' in navigator)) {
+      loadFallback('This browser does not support geolocation.');
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            await loadFromGps(pos);
+          } catch (err) {
+            console.error(err);
+            loadFallback('Location was found, but the weather lookup failed. Check your internet connection and try again.');
+          }
+        },
+        (err) => {
+          console.error(err);
+          loadFallback('Location access was denied or blocked. Use the browser site settings, allow location, then refresh the page.');
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+      );
+    }
+  </script>
+</body>
+</html>
