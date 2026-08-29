@@ -1,2 +1,2 @@
 # BillyBobBunny-Test1
-Why is a skibidi sigma so fanum tax?
+Welcome to my portfolio! I'm going to publish all of my projects in this repository.
